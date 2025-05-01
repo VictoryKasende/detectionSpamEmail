@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SpamShield - Détection intelligente de spam</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #f8fafc;
+        }
+
+        .gradient-bg {
+            background: linear-gradient(135deg, #6b73ff 0%, #000dff 100%);
+        }
+
+        .result-card {
+            transition: all 0.3s ease;
+            transform: translateY(20px);
+            opacity: 0;
+        }
+
+        .result-card.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        .spinner {
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .message-input {
+            min-height: 120px;
+            resize: none;
+        }
+
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(99, 102, 241, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0); }
+        }
+    </style>
+</head>
+<body>
+    <div class="min-h-screen flex flex-col">
+        <!-- Header -->
+        <header class="gradient-bg text-white py-6 shadow-lg">
+            <div class="container mx-auto px-4">
+                <div class="flex justify-between items-center">
+                    <div class="flex items-center space-x-2">
+                        <i class="fas fa-shield-alt text-2xl"></i>
+                        <h1 class="text-2xl font-bold">SpamTabor</h1>
+                    </div>
+                    {#<div class="hidden md:flex space-x-4">
+                        <a href="#" class="hover:text-gray-200 transition">Accueil</a>
+                        <a href="#" class="hover:text-gray-200 transition">À propos</a>
+                        <a href="#" class="hover:text-gray-200 transition">API</a>
+                    </div>#}
+                    <button class="md:hidden text-xl">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="flex-grow container mx-auto px-4 py-8">
+            <div class="max-w-4xl mx-auto">
+                <div class="text-center mb-12">
+                    <h2 class="text-3xl md:text-4xl font-bold text-gray-800 mb-4">Détection intelligente de spam</h2>
+                    <p class="text-gray-600 max-w-2xl mx-auto">
+                        Analysez vos messages en temps réel pour déterminer s'ils sont légitimes (ham) ou indésirables (spam) grâce à notre technologie avancée d'apprentissage automatique.
+                    </p>
+                </div>
+
+                <!-- Input Section -->
+                <div class="bg-white rounded-xl shadow-lg p-6 mb-8">
+                    <div class="mb-6">
+                        <label for="message" class="block text-gray-700 font-medium mb-2">Entrez votre message</label>
+                        <textarea
+                            id="message"
+                            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 message-input"
+                            placeholder="Ex: Félicitations! Vous avez gagné un prix de 1 000 000€..."
+                            required></textarea>
+                    </div>
+                    <div class="flex justify-center">
+                        <button id="analyze-btn" class="gradient-bg text-white px-8 py-3 rounded-lg font-medium hover:opacity-90 transition flex items-center space-x-2 pulse">
+                            <span>Analyser le message</span>
+                            <i class="fas fa-search"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Results Section -->
+                <div id="results" class="hidden">
+                    <div class="flex flex-col md:flex-row gap-6">
+                        <!-- Prediction Card -->
+                        <div id="prediction-card" class="result-card bg-white rounded-xl shadow-lg p-6 flex-1">
+                            <h3 class="text-xl font-semibold text-gray-800 mb-4">Résultat de l'analyse</h3>
+                            <div id="prediction-result" class="flex items-center justify-center py-8">
+                                <!-- Content will be filled by JavaScript -->
+                            </div>
+                        </div>
+
+                        <!-- Confidence Card -->
+                        <div id="confidence-card" class="result-card bg-white rounded-xl shadow-lg p-6 flex-1">
+                            <h3 class="text-xl font-semibold text-gray-800 mb-4">Niveau de confiance</h3>
+                            <div class="flex justify-center">
+                                <canvas id="confidence-chart" width="300" height="300"></canvas>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Message Details -->
+                    <div id="message-details" class="result-card bg-white rounded-xl shadow-lg p-6 mt-6">
+                        <h3 class="text-xl font-semibold text-gray-800 mb-4">Détails du message</h3>
+                        <div class="bg-gray-50 p-4 rounded-lg">
+                            <pre id="original-message" class="whitespace-pre-wrap text-gray-700"></pre>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Loading Indicator -->
+                <div id="loading" class="hidden text-center py-12">
+                    <div class="inline-block spinner text-indigo-500 text-4xl mb-4">
+                        <i class="fas fa-circle-notch"></i>
+                    </div>
+                    <p class="text-gray-600">Analyse en cours...</p>
+                </div>
+            </div>
+        </main>
+
+        <!-- Footer -->
+        <footer class="bg-gray-800 text-white py-8">
+            <div class="container mx-auto px-4">
+                <div class="flex flex-col md:flex-row justify-between items-center">
+                    <div class="mb-4 md:mb-0">
+                        <div class="flex items-center space-x-2">
+                            <i class="fas fa-shield-alt text-xl"></i>
+                            <span class="font-bold">SpamTabor</span>
+                        </div>
+                        <p class="text-gray-400 mt-2">Protégez-vous contre les messages indésirables</p>
+                    </div>
+                    <div class="flex space-x-6">
+                        <a href="https://github.com/VictoryKasende" class="hover:text-indigo-300 transition"><i class="fab fa-github text-xl"></i></a>
+                        <a href="https://www.instagram.com/victory_kasende/" class="hover:text-indigo-300 transition"><i class="fab fa-instagram text-xl"></i></a>
+                        <a href="https://www.linkedin.com/in/victory-kasende-360003278/" class="hover:text-indigo-300 transition"><i class="fab fa-linkedin text-xl"></i></a>
+                    </div>
+                </div>
+                <div class="border-t border-gray-700 mt-6 pt-6 text-center text-gray-400">
+                    <p>&copy; 2025 Victory Service. Tous droits réservés.</p>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const analyzeBtn = document.getElementById('analyze-btn');
+            const messageInput = document.getElementById('message');
+            const resultsSection = document.getElementById('results');
+            const loadingIndicator = document.getElementById('loading');
+            const predictionResult = document.getElementById('prediction-result');
+            const originalMessage = document.getElementById('original-message');
+            let confidenceChart = null;
+
+            analyzeBtn.addEventListener('click', async function() {
+                const message = messageInput.value.trim();
+
+                if (!message) {
+                    alert('Veuillez entrer un message à analyser');
+                    return;
+                }
+
+                // Show loading, hide results
+                loadingIndicator.classList.remove('hidden');
+                resultsSection.classList.add('hidden');
+                analyzeBtn.disabled = true;
+
+                try {
+                    // Simulate API call (replace with actual fetch to your Flask API)
+                    const response = await fetch('api/predict', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ message: message })
+                    });
+
+                    const data = await response.json();
+
+                    // Hide loading, show results
+                    loadingIndicator.classList.add('hidden');
+                    displayResults(data);
+
+                } catch (error) {
+                    console.error('Error:', error);
+                    loadingIndicator.classList.add('hidden');
+                    alert('Une erreur est survenue lors de l\'analyse du message');
+                } finally {
+                    analyzeBtn.disabled = false;
+                }
+            });
+
+            function displayResults(data) {
+                // Display the original message
+                originalMessage.textContent = data.message;
+
+                // Display prediction result
+                const isSpam = data.prediction === 'spam';
+                const confidence = isSpam ? data.confidence.spam : data.confidence.ham;
+
+                predictionResult.innerHTML = `
+                    <div class="text-center">
+                        <div class="inline-block p-4 rounded-full ${isSpam ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600'} mb-4">
+                            <i class="fas ${isSpam ? 'fa-exclamation-triangle' : 'fa-check-circle'} text-4xl"></i>
+                        </div>
+                        <h4 class="text-2xl font-bold ${isSpam ? 'text-red-600' : 'text-green-600'} mb-2">
+                            ${isSpam ? 'SPAM DÉTECTÉ' : 'MESSAGE LÉGITIME'}
+                        </h4>
+                        <p class="text-gray-600">Confiance: ${confidence.toFixed(2)}%</p>
+                    </div>
+                `;
+
+                // Create or update the confidence chart
+                const ctx = document.getElementById('confidence-chart').getContext('2d');
+
+                if (confidenceChart) {
+                    confidenceChart.destroy();
+                }
+
+                confidenceChart = new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Spam', 'Ham'],
+                        datasets: [{
+                            data: [data.confidence.spam, data.confidence.ham],
+                            backgroundColor: [
+                                '#ef4444',
+                                '#10b981'
+                            ],
+                            borderWidth: 0
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                                labels: {
+                                    font: {
+                                        family: 'Poppins',
+                                        size: 14
+                                    }
+                                }
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        return `${context.label}: ${context.raw}%`;
+                                    }
+                                }
+                            }
+                        },
+                        cutout: '70%'
+                    }
+                });
+
+                // Show results with animation
+                resultsSection.classList.remove('hidden');
+
+                // Animate result cards
+                const resultCards = document.querySelectorAll('.result-card');
+                resultCards.forEach((card, index) => {
+                    setTimeout(() => {
+                        card.classList.add('show');
+                    }, index * 200);
+                });
+            }
+
+            // Mock API response for demonstration
+            // Remove this in production
+            analyzeBtn.addEventListener('click', function() {
+                if (messageInput.value.includes('mock')) {
+                    setTimeout(() => {
+                        const mockData = {
+                            message: messageInput.value || "Congratulations! You won a prize.",
+                            prediction: messageInput.value.toLowerCase().includes('congrat') ? 'spam' : 'ham',
+                            confidence: {
+                                spam: Math.random() * 50 + (messageInput.value.toLowerCase().includes('congrat') ? 50 : 0),
+                                ham: Math.random() * 50 + (messageInput.value.toLowerCase().includes('congrat') ? 0 : 50)
+                            }
+                        };
+                        // Normalize confidence to sum to 100
+                        const total = mockData.confidence.spam + mockData.confidence.ham;
+                        mockData.confidence.spam = (mockData.confidence.spam / total) * 100;
+                        mockData.confidence.ham = (mockData.confidence.ham / total) * 100;
+
+                        loadingIndicator.classList.add('hidden');
+                        displayResults(mockData);
+                        analyzeBtn.disabled = false;
+                    }, 1500);
+                    return false;
+                }
+            });
+        });
+    </script>
+</body>
+</html>
